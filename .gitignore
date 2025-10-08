@@ -1,0 +1,27 @@
+# Ignore GitHub Actions workflows
+.github/
+
+# Ignore Python cache
+__pycache__/
+
+# Ignore temporary Excel files
+~$*.xlsx
+
+# Ignore macOS specific files
+.DS_Store
+
+# Ignore Claude settings
+.claude/
+
+# Ignore virtual environment
+venv/
+.venv/
+
+# Ignore build artifacts
+build/
+dist/
+*.egg-info/
+
+# Ignore IDE specific files
+.idea/
+.vscode/
