@@ -109,21 +109,23 @@ The script `main-code.py` automates retrieval of Maryland eMMA public procuremen
 
 ### Run the Script
 ```bash
-python main-code.py
+python main-code.py --days-ago 0 --log-level DEBUG
 ```
+- Drop `--log-level` to use the default from `LOG_LEVEL`.
+- Add `--skip-details` when you want a fast pass that omits the detail-page fetch.
 - The script prints `Updated workbook: <path> (target day: <n> days ago)` upon completion.
-- Check the console logs for retry attempts or warnings about rebuilding the workbook.
+- Check the console logs for pagination progress and retry/backoff notices.
 
 ## Operational Notes
 - **Timezone Handling:** All timestamps are normalized to Eastern Time using the standard `zoneinfo` database when available, falling back to naive local time otherwise.
 - **Rate Limiting:** `SLEEP_BETWEEN` introduces a delay between page fetches to avoid hammering the eMMA site. Increase the delay if you encounter throttling.
-- **Resilience:** The combination of retries and page fingerprinting prevents infinite paging loops and mitigates transient HTTP errors.
+- **Resilience:** The combination of retries, adaptive throttling, and page fingerprinting prevents infinite paging loops and mitigates transient HTTP errors.
+- **Detail progress:** Detail scraping logs progress every ten pages and summarizes success/failure counts so you can spot issues quickly.
 - **Data Integrity:** The workbook is regenerated if it becomes corrupt (`BadZipFile` or `InvalidFileException`), ensuring the process can self-heal.
 
 ## Extending the Script
 - Capture additional fields such as due dates or solicitation numbers by enhancing `extract_rows` and updating `MASTER_HDR` accordingly.
 - Implement logic to auto-populate `tags` or `score_bd_fit` from rules stored in the `Refs` sheet.
-- Replace the ad-hoc main block with a CLI argument parser (e.g., `argparse`) to make scheduling and parameterization easier.
 - Package the script as a module with tests so CI can verify scrape parsing logic on stored HTML fixtures.
 
 ## Troubleshooting
@@ -136,7 +138,7 @@ python main-code.py
 
 ## Quick Reference
 - **Primary entry point:** `__main__` block at the end of `main-code.py`.
-- **Core functions:** `emma_scrape`, `merge_into_excel`, `ensure_master_table_style`.
+- **Core functions:** `emma_scrape`, `scrape_detail_page`, `merge_into_excel`, `ensure_master_table_style`.
 - **Outputs:** Updated Excel workbook with synchronized `Master`, `Archive`, `Log`, and `Refs` worksheets.
 
 ## Enhancement To-Do List
