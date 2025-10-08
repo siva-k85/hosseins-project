@@ -138,3 +138,39 @@ python main-code.py
 - **Primary entry point:** `__main__` block at the end of `main-code.py`.
 - **Core functions:** `emma_scrape`, `merge_into_excel`, `ensure_master_table_style`.
 - **Outputs:** Updated Excel workbook with synchronized `Master`, `Archive`, `Log`, and `Refs` worksheets.
+
+## Enhancement To-Do List
+
+### Foundation & Reliability
+- [ ] **Parameter validation:** Add upfront checks for `DAYS_AGO`, `MAX_PAGES`, and `STALE_AFTER_D` so negative or non-numeric inputs fail fast with helpful errors (`main-code.py:68-74`).
+- [ ] **Config surface:** Introduce an `argparse` CLI that mirrors env vars, allowing overrides like `--days-ago` without exporting environment variables (`main-code.py:659-667`).
+- [ ] **Logging enrichment:** Swap `logging.basicConfig` for a named logger configured in `main()` so downstream libraries can be muted or extended; add debug logs around paging decisions and retries (`main-code.py:115-118`, `242-331`).
+- [ ] **Network fallbacks:** Detect 403/429 responses and escalate backoff dynamically; persist the last successful page HTML for diagnostics when retries are exhausted (`main-code.py:242-331`).
+- [ ] **Error handling:** Wrap workbook read/write calls to surface a clear message when the target path is read-only or missing (`main-code.py:349-391`, `601-614`).
+
+### Scraping Improvements
+- [ ] **HTML schema resilience:** Generalize `extract_rows` to match column headers rather than fixed indices so minor layout changes do not break parsing (`main-code.py:151-205`).
+- [ ] **Additional fields:** Capture solicitation IDs, due dates, and contact info if present; expand `MASTER_HDR` and merge logic to accommodate the new data (`main-code.py:197-204`, `321-324`, `340-344`, `562-578`).
+- [ ] **Date parsing:** Support alternate timestamp formats (e.g., missing seconds) and add unit tests with stored HTML fixtures to guard against regressions (`main-code.py:230-237`).
+- [ ] **Duplicate detection:** Track combination of `title+agency+publish_dt` to avoid duplicates when URLs are temporarily missing (`main-code.py:301-318`).
+- [ ] **Rate control:** Make `SLEEP_BETWEEN` adaptive based on server response headers (e.g., `Retry-After`) to stay polite under changing site policies (`main-code.py:288-294`).
+
+### Workbook Automation
+- [ ] **Refs integration:** Define a schema for the `Refs` tab (e.g., keyword → tag) and implement a lookup that auto-applies `tags`/`score_bd_fit` during merge (`main-code.py:367-368`, `562-578`).
+- [ ] **Archive hygiene:** Deduplicate rows appended to `Archive` to prevent multiples of the same record across runs (`main-code.py:628-639`).
+- [ ] **Excel styling:** Introduce a reusable style module so conditional formats, table style names, and column widths are centralized; consider using openpyxl utility functions for consistent widths (`main-code.py:410-515`).
+- [ ] **Workbook backups:** Before saving, create timestamped backups (e.g., `opportunities_YYYYMMDD.xlsx`) to protect against partial writes (`main-code.py:601-614`).
+- [ ] **Cross-platform paths:** Replace the Windows default path with a relative project path or detect OS to pick sensible defaults (`main-code.py:62-65`).
+
+### Observability & Testing
+- [ ] **HTML fixture tests:** Capture sample eMMA pages and build unit tests around `extract_rows`, `find_next_postback`, and `parse_publish_dt` to catch markup changes early (`main-code.py:151-237`).
+- [ ] **Workbook tests:** Use `openpyxl` in tests to verify merge scenarios (new, updated, stale) with synthetic data frames before touching real files (`main-code.py:562-639`).
+- [ ] **CI integration:** Add a `pytest` suite and GitHub Actions workflow (or similar) that runs headless tests on pull requests.
+- [ ] **Structured logging:** Emit JSON logs when `LOG_LEVEL=DEBUG` so scheduled jobs (cron, Airflow) can ingest metrics on counts of new/updated/stale rows (`main-code.py:601-614`).
+
+### Product Enhancements
+- [ ] **Historical analytics:** Generate a daily summary sheet or CSV showing counts per agency/category to support reporting without opening the workbook (`main-code.py:601-639`).
+- [ ] **Notification hooks:** After saving, optionally send an email or Teams/Slack message summarizing the run; make the destination configurable via env vars.
+- [ ] **Multi-date scraping:** Allow a range of `DAYS_AGO` values (e.g., `--days 0..3`) and aggregate results so missed runs can be caught up automatically (`main-code.py:329-331`).
+- [ ] **CLI subcommands:** Provide explicit commands such as `scrape`, `merge`, `archive`, or `report` to separate responsibilities and ease maintenance.
+- [ ] **Packaging:** Convert the script into an installable module with an entry point (e.g., `emma-updater`) and publish internally for reuse.
