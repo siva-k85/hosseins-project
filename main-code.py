@@ -344,6 +344,92 @@ MASTER_HDR = [
 ]
 
 
+def create_workbook_backup(original_path: str, max_backups: int = 5) -> str:
+    """
+    Create a timestamped backup of the workbook file.
+
+    Args:
+        original_path: Path to the original workbook file
+        max_backups: Maximum number of backups to keep (default: 5)
+
+    Returns:
+        Path to the created backup file
+    """
+    if not os.path.exists(original_path):
+        logging.debug("Original workbook '%s' doesn't exist, skipping backup", original_path)
+        return ""
+
+    try:
+        # Create backup directory
+        backup_dir = os.path.join(os.path.dirname(original_path), "backups")
+        os.makedirs(backup_dir, exist_ok=True)
+
+        # Generate timestamped backup filename
+        base_name = os.path.splitext(os.path.basename(original_path))[0]
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_filename = f"{base_name}_backup_{timestamp}.xlsx"
+        backup_path = os.path.join(backup_dir, backup_filename)
+
+        # Copy the file
+        import shutil
+        shutil.copy2(original_path, backup_path)
+
+        logging.info("Created workbook backup: %s", backup_path)
+
+        # Cleanup old backups
+        cleanup_old_backups(backup_dir, base_name, max_backups)
+
+        return backup_path
+
+    except (OSError, IOError) as exc:
+        logging.warning("Failed to create backup of '%s': %s", original_path, exc)
+        return ""
+
+
+def cleanup_old_backups(backup_dir: str, base_name: str, max_backups: int) -> None:
+    """
+    Remove old backup files, keeping only the most recent ones.
+
+    Args:
+        backup_dir: Directory containing backup files
+        base_name: Base name of the workbook (without extension)
+        max_backups: Maximum number of backups to keep
+    """
+    try:
+        if not os.path.exists(backup_dir):
+            return
+
+        # Find all backup files for this workbook
+        backup_files = []
+
+        for filename in os.listdir(backup_dir):
+            if filename.startswith(f"{base_name}_backup_") and filename.endswith(".xlsx"):
+                filepath = os.path.join(backup_dir, filename)
+                if os.path.isfile(filepath):
+                    backup_files.append((filepath, os.path.getmtime(filepath)))
+
+        # Sort by modification time (newest first)
+        backup_files.sort(key=lambda x: x[1], reverse=True)
+
+        # Remove old backups beyond max_backups limit
+        files_to_remove = backup_files[max_backups:]
+        removed_count = 0
+
+        for filepath, _ in files_to_remove:
+            try:
+                os.remove(filepath)
+                removed_count += 1
+                logging.debug("Removed old backup: %s", filepath)
+            except OSError as exc:
+                logging.warning("Failed to remove old backup '%s': %s", filepath, exc)
+
+        if removed_count > 0:
+            logging.info("Cleaned up %d old backup files in %s", removed_count, backup_dir)
+
+    except OSError as exc:
+        logging.warning("Failed to cleanup old backups in '%s': %s", backup_dir, exc)
+
+
 
 
 def init_workbook_if_needed(path:str):
@@ -370,6 +456,7 @@ def init_workbook_if_needed(path:str):
 
 
 
+    create_workbook_backup(path)
     wb.save(path)
 
 
@@ -677,6 +764,8 @@ def merge_into_excel(staging: list[dict]):
 
 
 
+    # Create backup before saving
+    create_workbook_backup(WORKBOOK_PATH)
     wb.save(WORKBOOK_PATH)
     logging.info(
         "Workbook saved: %s | Actions -> New:%d Updated:%d Unchanged:%d Stale:%d",
