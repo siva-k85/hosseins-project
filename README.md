@@ -153,6 +153,13 @@ Key tests include:
 └── requirements*.txt            # runtime/dev dependency manifests
 ```
 
+**Canonical production-ready components:**
+- `main-code.py` – scraper + Excel merge pipeline (production version).
+- `documentations/main-code.md` – extended technical documentation for the pipeline.
+- `streamlit_app/app.py` – Streamlit dashboard for browsing and exporting opportunities.
+- `tests/` (and fixtures) – pytest coverage for date parsing, schema resilience, deduplication.
+- `README.md` (this file) – authoritative instructions and architecture reference.
+
 ## Troubleshooting
 
 | Symptom | Cause | Resolution |
